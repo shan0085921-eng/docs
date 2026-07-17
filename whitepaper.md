@@ -1,15 +1,24 @@
-# VeriSphere: A Truth-Staking Protocol
-### White Paper — v14.3
-**Date:** April 2026
+# Verisphere: A Truth-Staking Protocol
+### White Paper — v15.0 (draft — under review)
+**Date:** July 2026
 **Contact:** info@verisphere.co
+
+> **Scope.** This paper describes the Verisphere **protocol** only: the on-chain
+> smart contracts in `core/`. It does not describe, and makes no representations
+> about, any application, website, relay, market maker, pricing mechanism, or
+> token-purchase service that any party (including Verisphere Ltd.) may build on
+> top of the protocol. Those are separate services governed by their own terms.
+> The protocol does not set, guarantee, or defend any market price for VSP.
 
 ---
 
 ## Abstract
 
-VeriSphere is a decentralized protocol for economically evaluating factual claims. Any participant may publish a claim on-chain and any participant may stake tokens to support or challenge it. Claims accumulate a Verity Score derived from the ratio and magnitude of stakes on each side. Evidence links between claims propagate truth-pressure through a directed graph, creating an interconnected epistemic structure where the credibility of each claim depends on the credibility of its evidence.
+Verisphere is a decentralized protocol for economically evaluating factual claims. Any participant may publish a claim on-chain and any participant may stake tokens to support or challenge it. Claims accumulate a Verity Score derived from the ratio and magnitude of stakes on each side. Evidence links between claims propagate truth-pressure through a directed graph, creating an interconnected epistemic structure where the credibility of each claim depends on the credibility of its evidence.
 
 The protocol operates on the Avalanche C-Chain using the VSP ERC-20 token. All scoring, staking, and evidence-linking logic is implemented in upgradeable Solidity contracts. The protocol is permissionless: any front-end, API, or automated agent may interact with the on-chain contracts directly.
+
+**The protocol does not adjudicate truth.** It has no oracle, no arbiter, and no privileged notion of what is true. Anyone may publish any assertion, however false, and anyone may stake for or against it. The protocol's only function is to make a position *cost something* when others are willing to stake against it: being wrong is expensive **only to the extent that other participants pay to make it so**. Verisphere does not decide what is true — it provides a transparent market in which participants attach their own economic conviction to claims, and it reports the running result.
 
 ---
 
@@ -17,7 +26,7 @@ The protocol operates on the Avalanche C-Chain using the VSP ERC-20 token. All s
 
 Existing information systems lack a mechanism for attaching economic cost to factual assertions. Search engines rank by engagement. Social platforms rank by virality. Encyclopedias rely on editorial consensus. Prediction markets handle binary, terminal events but cannot evaluate persistent, evolving claims such as "nuclear energy is environmentally sustainable" or "dietary saturated fat increases cardiovascular risk."
 
-VeriSphere addresses this gap by introducing a protocol where:
+Verisphere addresses this gap by introducing a protocol where:
 
 - Publishing a claim requires burning a fee, eliminating zero-cost spam.
 - Supporting or challenging a claim requires staking tokens, imposing a cost on both truthful and untruthful assertions.
@@ -260,6 +269,13 @@ The posting fee serves two purposes:
 - **Inflationary pressure**: correct stakes accrue value (minted by the StakeEngine).
 - **Equilibrium**: the balance between creation (burning) and staking (minting) is governed by protocol parameters.
 
+The mint and burn of VSP that back stake accrual and decay are performed under the
+`Authority`'s minter/burner roles. In operation, an automated off-chain process
+holds these roles and executes the periodic snapshot that mints to accruing lots and
+burns from decaying ones, according to the on-chain rules described in §3.2. The
+authority to mint and burn is governed as described in §6.2; the roles are
+revocable by governance.
+
 ---
 
 ## 6. Smart Contract Architecture
@@ -289,9 +305,25 @@ These primitives allow third-party services to offer gasless interaction with th
 
 ### 6.2 Governance
 
-Governance operates through a `TimelockController` that controls parameter changes, contract upgrades, and treasury operations. During the initial phase, governance is managed by a multisig. The protocol is designed to transition to on-chain governance as the ecosystem matures.
+On the production (mainnet) deployment, governance authority over the protocol is
+held by a `TimelockController` whose sole proposer and executor is a multi-signature
+(2-of-3) operations Safe. The timelock enforces a minimum delay (no less than two
+days on mainnet) between the scheduling and the execution of any privileged action,
+and the timelock admin role is renounced at deployment, so there is no deployer
+backdoor and no unilateral fast path.
 
-Governance can modify:
+**Governance handoff is part of deployment, not an optional later step.** The
+deployment procedure deploys the timelock, then transfers ownership of every
+governed contract — including the `Authority` — from the deploying account to the
+timelock via a two-step (propose/accept) transfer executed through the Safe. A
+mainnet deployment is **not considered complete** until this handoff has occurred
+and on-chain ownership of `Authority` resolves to the timelock. Until that point the
+contracts remain deployer-owned and the deployment is provisional.
+
+(Non-production test deployments may retain deployer ownership for iteration; that
+is a property of a test environment, not of the protocol as deployed for real use.)
+
+Through this timelocked, Safe-controlled governance, the following may be modified:
 - Posting fee amount
 - Staking rate bounds (min and max APR)
 - Activity threshold
@@ -331,6 +363,6 @@ The protocol may optionally be deployed on a dedicated Avalanche Subnet for isol
 
 ## 9. Conclusion
 
-VeriSphere defines a minimal, permissionless protocol for attaching economic consequence to factual assertions. Claims compete in an open market of support and challenge. Evidence links create a directed graph where credibility propagates through stake-weighted connections. Only credible claims — those with positive community support — can influence others, preventing abuse through double-negative exploits or poisoned associations. The Verity Score provides a transparent, continuously updated signal of economic consensus.
+Verisphere defines a minimal, permissionless protocol for attaching economic consequence to factual assertions. Claims compete in an open market of support and challenge. Evidence links create a directed graph where credibility propagates through stake-weighted connections. Only credible claims — those with positive community support — can influence others, preventing abuse through double-negative exploits or poisoned associations. The Verity Score provides a transparent, continuously updated signal of economic consensus.
 
 The protocol does not determine truth. It makes truth economically consequential.
